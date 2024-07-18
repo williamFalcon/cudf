@@ -218,7 +218,6 @@ std::pair<std::unique_ptr<column>, std::unique_ptr<column>> windows_from_offset(
                                    stream,
                                    mr);
   if (only_preceding) {
-    stream.synchronize();
     return {std::move(preceding), nullptr};
   } else {
     auto following = type_dispatcher(input.type(),
@@ -229,7 +228,6 @@ std::pair<std::unique_ptr<column>, std::unique_ptr<column>> windows_from_offset(
                                      window_type,
                                      stream,
                                      mr);
-    stream.synchronize();
     return {std::move(preceding), std::move(following)};
   }
 }
