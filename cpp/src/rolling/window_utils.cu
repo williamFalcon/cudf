@@ -153,7 +153,7 @@ struct window_offset_impl {
         d_length, d_offset, input_begin, input_end});
     } else {
       // Unreachable.
-      CUDF_FAIL("Unhandled window type.");
+      CUDF_UNREACHABLE("Unhandled window type.");
     }
     return result;
   }
