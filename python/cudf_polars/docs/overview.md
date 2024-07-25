@@ -8,7 +8,7 @@ You will need:
    preferred configuration. Or else, use
    [rustup](https://www.rust-lang.org/tools/install)
 2. A [cudf development
-   environment](https://github.com/rapidsai/cudf/blob/branch-24.08/CONTRIBUTING.md#setting-up-your-build-environment).
+   environment](https://github.com/rapidsai/cudf/blob/branch-24.10/CONTRIBUTING.md#setting-up-your-build-environment).
    The combined devcontainer works, or whatever your favourite approach is.
 
 > ![NOTE] These instructions will get simpler as we merge code in.
@@ -223,6 +223,24 @@ def test_whatever():
 
     assert_gpu_result_equal(query)
 ```
+
+## Test coverage and asserting failure modes
+
+Where translation of a query should fail due to the feature being
+unsupported we should test this. To assert that _translation_ raises
+an exception (usually `NotImplementedError`), use the utility function
+`assert_ir_translation_raises`:
+
+```python
+from cudf_polars.testing.asserts import assert_ir_translation_raises
+
+
+def test_whatever():
+    unsupported_query = ...
+    assert_ir_translation_raises(unsupported_query, NotImplementedError)
+```
+
+This test will fail if translation does not raise.
 
 # Debugging
 

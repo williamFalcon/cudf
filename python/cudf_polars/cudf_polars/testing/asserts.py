@@ -11,21 +11,22 @@ from typing import TYPE_CHECKING
 from polars.testing.asserts import assert_frame_equal
 
 from cudf_polars.callback import execute_with_cudf
+from cudf_polars.dsl.translate import translate_ir
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     import polars as pl
 
     from cudf_polars.typing import OptimizationArgs
 
-__all__: list[str] = ["assert_gpu_result_equal"]
+__all__: list[str] = ["assert_gpu_result_equal", "assert_ir_translation_raises"]
 
 
 def assert_gpu_result_equal(
     lazydf: pl.LazyFrame,
     *,
-    collect_kwargs: Mapping[OptimizationArgs, bool] | None = None,
+    collect_kwargs: dict[OptimizationArgs, bool] | None = None,
+    polars_collect_kwargs: dict[OptimizationArgs, bool] | None = None,
+    cudf_collect_kwargs: dict[OptimizationArgs, bool] | None = None,
     check_row_order: bool = True,
     check_column_order: bool = True,
     check_dtypes: bool = True,
@@ -42,8 +43,17 @@ def assert_gpu_result_equal(
     lazydf
         frame to collect.
     collect_kwargs
-        Keyword arguments to pass to collect. Useful for controlling
-        optimization settings.
+        Common keyword arguments to pass to collect for both polars CPU and
+        cudf-polars.
+        Useful for controlling optimization settings.
+    polars_collect_kwargs
+        Keyword arguments to pass to collect for execution on polars CPU.
+        Overrides kwargs in collect_kwargs.
+        Useful for controlling optimization settings.
+    cudf_collect_kwargs
+        Keyword arguments to pass to collect for execution on cudf-polars.
+        Overrides kwargs in collect_kwargs.
+        Useful for controlling optimization settings.
     check_row_order
         Expect rows to be in same order
     check_column_order
@@ -67,10 +77,19 @@ def assert_gpu_result_equal(
     NotImplementedError
         If GPU collection failed in some way.
     """
-    collect_kwargs = {} if collect_kwargs is None else collect_kwargs
-    expect = lazydf.collect(**collect_kwargs)
+    if collect_kwargs is None:
+        collect_kwargs = {}
+    final_polars_collect_kwargs = collect_kwargs.copy()
+    final_cudf_collect_kwargs = collect_kwargs.copy()
+    if polars_collect_kwargs is not None:
+        final_polars_collect_kwargs.update(polars_collect_kwargs)
+    if cudf_collect_kwargs is not None:  # pragma: no cover
+        # exclude from coverage since not used ATM
+        # but this is probably still useful
+        final_cudf_collect_kwargs.update(cudf_collect_kwargs)
+    expect = lazydf.collect(**final_polars_collect_kwargs)
     got = lazydf.collect(
-        **collect_kwargs,
+        **final_cudf_collect_kwargs,
         post_opt_callback=partial(execute_with_cudf, raise_on_fail=True),
     )
     assert_frame_equal(
@@ -84,3 +103,34 @@ def assert_gpu_result_equal(
         atol=atol,
         categorical_as_str=categorical_as_str,
     )
+
+
+def assert_ir_translation_raises(q: pl.LazyFrame, *exceptions: type[Exception]) -> None:
+    """
+    Assert that translation of a query raises an exception.
+
+    Parameters
+    ----------
+    q
+        Query to translate.
+    exceptions
+        Exceptions that one expects might be raised.
+
+    Returns
+    -------
+    None
+        If translation successfully raised the specified exceptions.
+
+    Raises
+    ------
+    AssertionError
+       If the specified exceptions were not raised.
+    """
+    try:
+        _ = translate_ir(q._ldf.visit())
+    except exceptions:
+        return
+    except Exception as e:
+        raise AssertionError(f"Translation DID NOT RAISE {exceptions}") from e
+    else:
+        raise AssertionError(f"Translation DID NOT RAISE {exceptions}")
