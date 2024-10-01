@@ -18,7 +18,6 @@ import pandas as pd
 from cudf.core._compat import PANDAS_CURRENT_SUPPORTED_VERSION, PANDAS_VERSION
 
 
-@pytest.mark.xdist_group(name="group1")
 @pytest.mark.skipif(
     PANDAS_VERSION < PANDAS_CURRENT_SUPPORTED_VERSION,
     reason="function names change across versions of pandas, so making sure it only runs on latest version of pandas",
@@ -73,21 +72,18 @@ def test_profiler():
         assert line_stats[3] == 0 if "Time" not in call else line_stats[2] == 0
 
 
-@pytest.mark.xdist_group(name="group1")
 def test_profiler_hasattr_exception():
     with Profiler():
         df = pd.DataFrame({"data": [1, 2, 3]})
         hasattr(df, "this_does_not_exist")
 
 
-@pytest.mark.xdist_group(name="group1")
 def test_profiler_fast_slow_name_mismatch():
     with Profiler():
         df = pd.DataFrame({"a": [1, 2, 3], "b": [3, 4, 5]})
         df.iloc[0, 1] = "foo"
 
 
-@pytest.mark.xdist_group(name="group1")
 def test_profiler_commandline():
     data_directory = os.path.dirname(os.path.abspath(__file__))
     # Create a copy of the current environment variables
