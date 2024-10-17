@@ -110,7 +110,6 @@ class cufile_shim {
 
   ~cufile_shim()
   {
-    if (driver_close != nullptr) driver_close();
     if (cf_lib != nullptr) dlclose(cf_lib);
   }
 
